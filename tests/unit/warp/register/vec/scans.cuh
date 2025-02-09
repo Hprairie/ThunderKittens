@@ -1,20 +1,18 @@
+
 #include "testing_flags.cuh"
 
-#ifdef TEST_WARP_SHARED_VEC
+#ifdef TEST_WARP_REGISTER_VEC_SCANS
 
 #include "testing_commons.cuh"
 
-#include "maps.cuh"
-#include "reductions.cuh"
-#include "conversions.cuh"
-#include "scans.cuh"
-
 namespace warp {
-namespace shared {
+namespace reg {
 namespace vec {
+namespace scans {
 
 void tests(test_data &results);
 
+}
 }
 }
 }

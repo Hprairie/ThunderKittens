@@ -13,6 +13,9 @@ void warp::reg::vec::tests(test_data &results) {
 #ifdef TEST_WARP_REGISTER_VEC_REDUCTIONS
     warp::reg::vec::reductions::tests(results);
 #endif
+#ifdef TEST_WARP_REGISTER_VEC_SCANS
+    warp::reg::vec::scans::tests(results);
+#endif
 }
 
 #endif

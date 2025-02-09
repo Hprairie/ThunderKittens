@@ -13,6 +13,9 @@ void warp::shared::vec::tests(test_data &results) {
 #ifdef TEST_WARP_SHARED_VEC_REDUCTIONS
     warp::shared::vec::reductions::tests(results);
 #endif
+#ifdef TEST_WARP_SHARED_VEC_SCANS
+    warp::shared::vec::scans::tests(results);
+#endif
 }
 
 #endif

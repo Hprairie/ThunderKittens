@@ -115,6 +115,26 @@ __device__ inline float2 packed_shfl_down_sync<float2>(uint32_t mask, const floa
     return r;
 }
 /**
+ * @brief Perform a shuffle up operation on a packed type synchronously across a warp.
+ * @tparam T The type of the value to be shuffled.
+ * @param mask[in] The mask of active threads.
+ * @param f[in] The value to be shuffled.
+ * @param delta[in] The number of positions to shuffle up.
+ * @return The result of the shuffle operation.
+ */
+template<typename T>
+__device__ static inline T packed_shfl_up_sync(uint32_t mask, const T &f, int delta) {
+    return __shfl_up_sync(mask, f, delta);
+}
+
+template<>
+__device__ inline float2 packed_shfl_up_sync<float2>(uint32_t mask, const float2 &f, int delta) {
+    float2 r;
+    r.x = __shfl_up_sync(mask, f.x, delta);
+    r.y = __shfl_up_sync(mask, f.y, delta);
+    return r;
+}
+/**
  * @brief Perform a packed shuffle operation synchronously across a warp.
  * @tparam T The type of the value to be shuffled.
  * @param mask[in] The mask of active threads.

@@ -7,6 +7,7 @@
 #include "maps.cuh"
 #include "reductions.cuh"
 #include "conversions.cuh"
+#include "scans.cuh"
 
 namespace warp {
 namespace reg {
