@@ -9,6 +9,7 @@
 #include "maps.cuh"
 #include "reductions.cuh"
 #include "mma.cuh"
+#include "debug.cuh"
 
 
 #include "complex/complex_conversions.cuh"
