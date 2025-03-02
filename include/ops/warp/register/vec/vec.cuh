@@ -10,3 +10,4 @@
 #include "reductions.cuh"
 #include "scans.cuh"
 #include "indexing.cuh"
+#include "debug.cuh"

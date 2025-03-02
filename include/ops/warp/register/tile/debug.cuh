@@ -8,6 +8,7 @@
 #include "../../../../common/common.cuh"
 #include "../../../../types/types.cuh"
 
+namespace kittens {
 /**
  * @brief Prints the contents of a tile to the console for debugging purposes.
  *
@@ -18,38 +19,37 @@
  * @tparam T Tile type.
  * @param tile[in] The tile to print.
  */
-namespace kittens {
-    template<ducks::rt::all T>
-    __device__ static inline void print(const T &tile) {
-        // Header
-        if (threadIdx.x == 0) {
-            printf("Tile %dx%d:\n", tile.rows, tile.cols);
-        }
-        __syncwarp();
-    
-        // Iterate through tiles
-        for(int i = 0; i < tile.height; i++) {
-            for(int j = 0; j < tile.width; j++) {
-                // Let each thread print in order
-                for(int thread = 0; thread < 32; thread++) {
-                    if (threadIdx.x == thread) {
-                    printf("\nThread %d: [", threadIdx.x);
-                    for(int k = 0; k < tile.packed_per_tile; k++) {
-                        base_ops::print(tile.tiles[i][j].data[k]);
-                    }
-                    printf("]");
-                    }
-                    __syncwarp();
+template<ducks::rt::all T>
+__device__ static inline void print(const T &tile) {
+    // Header
+    if (threadIdx.x == 0) {
+        printf("Tile [%dx%d]:\n", tile.rows, tile.cols);
+    }
+    __syncwarp();
+
+    // Iterate through tiles
+    for(int i = 0; i < tile.height; i++) {
+        for(int j = 0; j < tile.width; j++) {
+            // Let each thread print in order
+            for(int thread = 0; thread < 32; thread++) {
+                if (threadIdx.x == thread) {
+                printf("\nThread %d: [", threadIdx.x);
+                for(int k = 0; k < tile.packed_per_tile; k++) {
+                    base_ops::print(tile.tiles[i][j].data[k]);
                 }
-                if (threadIdx.x == 0) {
-                    printf("\n|\n");
+                printf("]");
                 }
                 __syncwarp();
             }
             if (threadIdx.x == 0) {
-                printf("---\n");
+                printf("\n|\n");
             }
             __syncwarp();
         }
+        if (threadIdx.x == 0) {
+            printf("---\n");
+        }
+        __syncwarp();
     }
+}
 }
