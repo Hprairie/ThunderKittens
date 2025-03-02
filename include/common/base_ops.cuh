@@ -353,6 +353,25 @@ struct fma_AxCtB { // this is the one needed for attention
     }
 };
 
+/* ----------  PRINT OPS  ---------- */
+/**
+ * @brief Prints a given message to the standard output.
+ *
+ * This function handles the print operation by sending the specified message
+ * to the console. It ensures that the output is correctly formatted for display.
+ *
+ * @param message The message or data to be printed.
+ */
+struct print {
+template<typename T> static __device__ inline void op(const T &a) { printf("%f\n", static_cast<float>(a)); }
+}
+template<> __device__ inline void print::op<float2>(const float2 &a) { printf("%f %f\n", a.x, a.y);                                     }
+template<> __device__ inline void print::op<bf16>  (const bf16 &a)   { printf("%f\n", __bfloat162float(a));                             }
+template<> __device__ inline void print::op<bf16_2>(const bf16_2 &a) { printf("%f %f\n", __bfloat162float(a.x), __bfloat162float(a.y)); }
+template<> __device__ inline void print::op<half>  (const half &a)   { printf("%f\n", __half2float(a));                                 }
+template<> __device__ inline void print::op<half_2>(const half_2 &a) { printf("%f %f\n", __half2float(a.x), __half2float(a.y));         }
+
+
 } // namespace base_ops
 
 } // namespace kittens

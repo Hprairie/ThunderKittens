@@ -1,6 +1,7 @@
+
 /**
  * @file
- * @brief Debug operations: between tiles, and those which apply vectors to tiles.
+ * @brief Debug operations: between vectors.
  */
 
 #pragma once
@@ -8,16 +9,6 @@
 #include "../../../../common/common.cuh"
 #include "../../../../types/types.cuh"
 
-/**
- * @brief Prints the contents of a tile to the console for debugging purposes.
- *
- * This function prints a formatted representation of a tile, showing its dimensions
- * and the data contained in each thread. The output is synchronized across threads
- * to ensure proper ordering of printed values.
- *
- * @tparam T Tile type.
- * @param tile[in] The tile to print.
- */
 namespace kittens {
     template<ducks::rt::all T>
     __device__ static inline void print(const T &tile) {
@@ -28,8 +19,8 @@ namespace kittens {
         __syncwarp();
     
         // Iterate through tiles
-        for(int i = 0; i < tile.height; i++) {
-            for(int j = 0; j < tile.width; j++) {
+        for(int i = 0; i < tile.outer_dim; i++) {
+            for(int j = 0; j < tile.inner_dim; j++) {
                 // Let each thread print in order
                 for(int thread = 0; thread < 32; thread++) {
                     if (threadIdx.x == thread) {
