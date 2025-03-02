@@ -125,6 +125,7 @@ struct mamba2_fwd_template {
             warpgroup::copy(args.scratch.a_cumsum[warpgroupid], args.input.a[warpgroupid])
             warpgroup::sync(warpgroupid);
 
+            // Perform discretization in log space
             if (warpgroup::warpid() == 0){
                 cumsum(args.scratch.a_cumsum[warpgroupid], args.scratch.a_cumsum[warpgroupid]);
             }
@@ -136,7 +137,7 @@ struct mamba2_fwd_template {
             sub(args.state.local_decay, decay);
             exp(args.state.local_decay, args.state.local_decay);
 
-            // Add attention mask
+            // Discretize B
 
             // Calculate the attention block
             warpgroup::load(args.state.c_reg, args.input.c);
@@ -146,8 +147,16 @@ struct mamba2_fwd_template {
             warpgroup::mm_AB(args.state.o_reg, args.state.att_block, args.input.x[warpgroupid]);
             warpgroup::mma_async_wait();
 
-            // Multiply by the decay
+            // Multiply by the decay and attention mask
             warpgroup::mma_async_wait();
+
+            // MMA with x to get the output
+
+            // Add in running output
+
+            // Store current running output state
+
+            // Store the output
 
         };
 

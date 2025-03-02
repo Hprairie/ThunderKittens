@@ -9,3 +9,4 @@
 #include "maps.cuh"
 #include "reductions.cuh"
 #include "scans.cuh"
+#include "indexing.cuh"
