@@ -86,8 +86,8 @@ __device__ inline static void load(RV &dst, const GL &src, const COORD &idx) {
  * @param[out] dst The destination array in global memory to store data into.
  * @param[in] src The source register vector to store data from.
  */
-template<ducks::rv::all RV, ducks::gl::all GL, ducks::coord::vec COORD=coord<RV>>
-__device__ inline static void store(const GL &dst, const RV &src, const COORD &idx) {
+template<typename op, ducks::rv::all RV, ducks::gl::all GL, ducks::coord::vec COORD=coord<RV>>
+__device__ inline static void base_store(const GL &dst, const RV &src, const COORD &idx) {
     using T2 = RV::dtype;
     using U = typename GL::dtype;
     using U2 = base_types::packing<U>::packed_type;
@@ -104,7 +104,8 @@ __device__ inline static void store(const GL &dst, const RV &src, const COORD &i
             int i_dim = (laneid/4) % 2;
             // this should be a maximally coalesced store. I hope!
             if(idx < src.outer_dim*16)
-                *(U2*)&dst_ptr[idx] = base_types::convertor<U2, T2>::convert(src[o_dim][i_dim]);
+                // *(U2*)&dst_ptr[idx] = base_types::convertor<U2, T2>::convert(src[o_dim][i_dim]);
+                op::op(*(U2*)&dst_ptr[idx], base_types::convertor<U2, T2>::convert(src[o_dim][i_dim]));
         }
     }
     else if constexpr (std::is_same_v<typename RV::layout, ortho_l>) {
@@ -119,7 +120,8 @@ __device__ inline static void store(const GL &dst, const RV &src, const COORD &i
                 U tmp;
                 if(laneid%2==0) tmp = base_types::convertor<U, T>::convert(src[o_dim][0].x);
                 else tmp = base_types::convertor<U, T>::convert(src[o_dim][0].y);
-                dst_ptr[idx] = tmp;
+                // dst_ptr[idx] = tmp;
+                op::op(dst_ptr[idx], tmp);
             }
         }
     }
@@ -127,10 +129,62 @@ __device__ inline static void store(const GL &dst, const RV &src, const COORD &i
         #pragma unroll
         for(auto w = 0; w < src.outer_dim; w++) {
             if(w < src.outer_dim-1 || src.length%32 == 0 || laneid<16) {
-                dst_ptr[w*32 + laneid] = base_types::convertor<U, T>::convert(src[w][0]);
+                // dst_ptr[w*32 + laneid] = base_types::convertor<U, T>::convert(src[w][0]);
+                op::op(dst_ptr[w*32 + laneid], base_types::convertor<U, T>::convert(src[w][0]));
             }
         }
     }
+}
+
+
+/* ----------  WRAPPERS FOR PRETTINESS  ---------- */
+
+/**
+ * @brief Store data from a register vector to a destination array in global memory.
+ *
+ * @param dst The destination array in global memory to store data into.
+ * @param src The source register vector to store data from.
+ * @param idx The coordinate index for storing.
+ */
+ template<ducks::rv::all RV, ducks::gl::all GL, ducks::coord::vec COORD=coord<RV>>
+ __device__ inline static void store(const GL &dst, const RV &src, const COORD &idx) {
+     base_store<base_ops::assign, RV, GL, COORD>(dst, src, idx); 
+ }
+
+/**
+ * @brief Atomically add data from a register vector to a destination array in global memory.
+ *
+ * @param dst The destination array in global memory to atomically add data into.
+ * @param src The source register vector containing values to add.
+ * @param idx The coordinate index for storing.
+ */
+template<ducks::rv::all RV, ducks::gl::all GL, ducks::coord::vec COORD=coord<RV>>
+__device__ inline static void atomic_add(const GL &dst, const RV &src, const COORD &idx) {
+    base_store<base_ops::atomic_add, RV, GL, COORD>(dst, src, idx);
+}
+
+/**
+ * @brief Atomically take maximum of data from a register vector and a destination array in global memory.
+ *
+ * @param dst The destination array in global memory to atomically update with maximum values.
+ * @param src The source register vector containing values for maximum comparison.
+ * @param idx The coordinate index for storing.
+ */
+template<ducks::rv::all RV, ducks::gl::all GL, ducks::coord::vec COORD=coord<RV>>
+__device__ inline static void atomic_max(const GL &dst, const RV &src, const COORD &idx) {
+    base_store<base_ops::atomic_max, RV, GL, COORD>(dst, src, idx);
+}
+
+/**
+ * @brief Atomically take minimum of data from a register vector and a destination array in global memory.
+ *
+ * @param dst The destination array in global memory to atomically update with minimum values.
+ * @param src The source register vector containing values for minimum comparison.
+ * @param idx The coordinate index for storing.
+ */
+template<ducks::rv::all RV, ducks::gl::all GL, ducks::coord::vec COORD=coord<RV>>
+__device__ inline static void atomic_min(const GL &dst, const RV &src, const COORD &idx) {
+    base_store<base_ops::atomic_min, RV, GL, COORD>(dst, src, idx);
 }
 
 } // namespace kittens

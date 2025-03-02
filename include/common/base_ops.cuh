@@ -371,6 +371,38 @@ template<> __device__ inline void print::op<bf16_2>(const bf16_2 &a) { printf("%
 template<> __device__ inline void print::op<half>  (const half &a)   { printf("%f\n", __half2float(a));                                 }
 template<> __device__ inline void print::op<half_2>(const half_2 &a) { printf("%f %f\n", __half2float(a.x), __half2float(a.y));         }
 
+/* ----------  STORE OPS  ---------- */
+/**
+ * @brief Store operation.
+ *
+ * This operation stores the input value to the specified memory location.
+ *
+ * @tparam T The data type of the input value.
+ * @param dst[out] The memory location where the value is stored.
+ * @param src[in] The value to be stored.
+ */
+struct assign {
+    template<typename T> static __device__ inline void op(T &dst, const T &src) { dst = src; }
+};
+struct atomic_add {
+    template<typename T> static __device__ inline void op(T &dst, const T &src) { atomicAdd(&dst, src); }
+};
+struct atomic_max {
+    template<typename T> static __device__ inline void op(T &dst, const T &src) { atomicMax(&dst, src); }
+};
+struct atomic_min {
+    template<typename T> static __device__ inline void op(T &dst, const T &src) { atomicMin(&dst, src); }
+};
+struct atomic_and {
+    template<typename T> static __device__ inline void op(T &dst, const T &src) { atomicAnd(&dst, src); }
+};
+struct atomic_or {
+    template<typename T> static __device__ inline void op(T &dst, const T &src) { atomicOr(&dst, src); }
+};
+struct atomic_xor {
+    template<typename T> static __device__ inline void op(T &dst, const T &src) { atomicXor(&dst, src); }
+};
+
 
 } // namespace base_ops
 
