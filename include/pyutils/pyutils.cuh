@@ -47,6 +47,7 @@ template<ducks::gl::all GL> struct from_object<GL> {
 };
 
 template<typename T> concept has_dynamic_shared_memory = requires(T t) { { t.dynamic_shared_memory() } -> std::convertible_to<int>; };
+template<typename T> concept has_inputs = requires { T::inputs(); };
 
 template<typename> struct trait;
 template<typename MT, typename T> struct trait<MT T::*> { using member_type = MT; using type = T; };
@@ -63,6 +64,80 @@ template<auto kernel, typename TGlobal> static void bind_kernel(auto m, auto nam
         }
     });
 }
+// With stream
+template<auto kernel, typename TGlobal>
+static void bind_kernel_stream(auto m, auto name, auto TGlobal::*... member_ptrs) {
+    m.def((std::string(name) + "_stream").c_str(), [](object<decltype(member_ptrs)>... args, uintptr_t stream) {
+        TGlobal __g__ {from_object<typename trait<decltype(member_ptrs)>::member_type>::make(args)...};
+        cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(static_cast<uintptr_t>(stream));
+        if constexpr (has_dynamic_shared_memory<TGlobal>) {
+            int __dynamic_shared_memory__ = (int)__g__.dynamic_shared_memory();
+            cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, __dynamic_shared_memory__);
+            kernel<<<__g__.grid(), __g__.block(), __dynamic_shared_memory__, cuda_stream>>>(__g__);
+        } else {
+            kernel<<<__g__.grid(), __g__.block(), 0, cuda_stream>>>(__g__);
+        }
+    });
+}
+
+// With grid/block dimensions
+template<auto kernel, typename TGlobal>
+static void bind_kernel_grid(auto m, auto name, auto TGlobal::*... member_ptrs) {
+    m.def((std::string(name) + "_grid").c_str(), [](object<decltype(member_ptrs)>... args, 
+                            int grid_x, int grid_y, int grid_z,
+                            int block_x, int block_y, int block_z) {
+        TGlobal __g__ {from_object<typename trait<decltype(member_ptrs)>::member_type>::make(args)...};
+        dim3 grid(grid_x, grid_y, grid_z);
+        dim3 block(block_x, block_y, block_z);
+        if constexpr (has_dynamic_shared_memory<TGlobal>) {
+            int __dynamic_shared_memory__ = (int)__g__.dynamic_shared_memory();
+            cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, __dynamic_shared_memory__);
+            kernel<<<grid, block, __dynamic_shared_memory__>>>(__g__);
+        } else {
+            kernel<<<grid, block>>>(__g__);
+        }
+    });
+}
+
+// With stream and grid/block dimensions
+template<auto kernel, typename TGlobal>
+static void bind_kernel_stream_grid(auto m, auto name, auto TGlobal::*... member_ptrs) {
+    m.def((std::string(name) + "_stream_grid").c_str(), [](object<decltype(member_ptrs)>... args,
+                                    int grid_x, int grid_y, int grid_z,
+                                    int block_x, int block_y, int block_z,
+                                    uintptr_t stream) {
+        TGlobal __g__ {from_object<typename trait<decltype(member_ptrs)>::member_type>::make(args)...};
+        dim3 grid(grid_x, grid_y, grid_z);
+        dim3 block(block_x, block_y, block_z);
+        cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(static_cast<uintptr_t>(stream));
+        if constexpr (has_dynamic_shared_memory<TGlobal>) {
+            int __dynamic_shared_memory__ = (int)__g__.dynamic_shared_memory();
+            cudaFuncSetAttribute(kernel, cudaFuncAttributeMaxDynamicSharedMemorySize, __dynamic_shared_memory__);
+            kernel<<<grid, block, __dynamic_shared_memory__, cuda_stream>>>(__g__);
+        } else {
+            kernel<<<grid, block, 0, cuda_stream>>>(__g__);
+        }
+    });
+}
+
+// Convenience function to bind all variants
+template<auto kernel, typename TGlobal>
+static void bind_kernel_all(auto m, auto name, auto TGlobal::*... member_ptrs) {
+    bind_kernel<kernel, TGlobal>(m, name, member_ptrs...);
+    bind_kernel_stream<kernel, TGlobal>(m, name, member_ptrs...);
+    bind_kernel_grid<kernel, TGlobal>(m, name, member_ptrs...);
+    bind_kernel_stream_grid<kernel, TGlobal>(m, name, member_ptrs...);
+}
+
+// Version that uses inputs() for all variants
+template<auto kernel, typename TGlobal>
+static void bind_kernel_all(auto m, auto name) {
+    static_assert(has_inputs<TGlobal>, "TGlobal must provide a static inputs() method");
+    
+    std::apply([&](auto... member_ptrs) {
+        bind_kernel_all<kernel, TGlobal>(m, name, member_ptrs...);
+    }, TGlobal::inputs());
+}
 template<auto function, typename TGlobal> static void bind_function(auto m, auto name, auto TGlobal::*... member_ptrs) {
     m.def(name, [](object<decltype(member_ptrs)>... args) {
         TGlobal __g__ {from_object<typename trait<decltype(member_ptrs)>::member_type>::make(args)...};
@@ -70,5 +145,20 @@ template<auto function, typename TGlobal> static void bind_function(auto m, auto
     });
 }
 
+
+template<auto kernel, typename TGlobal> static void bind_kernel(auto m, auto name) {
+    static_assert(has_inputs<TGlobal>, "TGlobal must provide a static inputs() method");
+    
+    std::apply([&](auto... member_ptrs) {
+        bind_kernel<kernel>(m, name, member_ptrs...);
+    }, TGlobal::inputs());
+}
+template<auto function, typename TGlobal> static void bind_function(auto m, auto name) {
+    static_assert(has_inputs<TGlobal>, "TGlobal must provide a static inputs() method");
+    
+    std::apply([&](auto... member_ptrs) {
+        bind_function<function>(m, name, member_ptrs...);
+    }, TGlobal::inputs());
+}
 } // namespace py
 } // namespace kittens

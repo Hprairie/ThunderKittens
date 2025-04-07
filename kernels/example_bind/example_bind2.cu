@@ -1,5 +1,6 @@
 #include "kittens.cuh"
 #include "pyutils/pyutils.cuh"
+#include "tuple"
 using namespace kittens;
 
 using my_layout = gl<float, -1, -1, -1, 64, st_fl<64,64>>; // An example layout that also instantiates a TMA descriptor on Hopper.
@@ -7,6 +8,9 @@ struct globals {
     my_layout in, out;
     dim3 grid()  { return dim3(in.batch(), in.depth(), in.rows()); }
     dim3 block() { return dim3(in.cols()); }
+    static auto inputs() {
+        return std::make_tuple(&globals::in, &globals::out);
+    }
 };
 __global__ void copy_kernel(const __grid_constant__ globals g) {
     if(threadIdx.x == 0 && blockIdx.x == 0 && blockIdx.y == 0 && blockIdx.z == 0) printf("Hello, from inside the kernel!\n");
@@ -19,6 +23,7 @@ void run_copy_kernel(globals g) {
 
 PYBIND11_MODULE(example_bind, m) {
     m.doc() = "example_bind python module";
-    py::bind_kernel<copy_kernel>(m, "copy_kernel", &globals::in, &globals::out);
-    py::bind_function<run_copy_kernel>(m, "wrapped_copy_kernel", &globals::in, &globals::out);
+    // py::bind_kernel<copy_kernel, globals>(m, "copy_kernel");
+    py::bind_kernel_all<copy_kernel, globals>(m, "copy_kernel");
+    py::bind_function<run_copy_kernel, globals>(m, "wrapped_copy_kernel");
 }
